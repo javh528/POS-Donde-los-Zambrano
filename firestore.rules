@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Funciones helper ──────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ── Colección: users ──────────────────────────────────────────────────
+    // Solo el usuario admin puede leer/escribir su propio documento
+    match /users/{userId} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Colección: products ───────────────────────────────────────────────
+    // Lectura pública (la app carga el menú en tiempo real)
+    // Escritura solo autenticados (admin panel futuro)
+    match /products/{productId} {
+      allow read:  if true;
+      allow write: if isSignedIn();
+    }
+
+    // ── Colección: menu_config ────────────────────────────────────────────
+    // Lectura pública, escritura solo autenticados
+    match /menu_config/{docId} {
+      allow read:  if true;
+      allow write: if isSignedIn();
+    }
+
+    // ── Colección: orders ─────────────────────────────────────────────────
+    match /orders/{orderId} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Colección: analytics_daily ────────────────────────────────────────
+    match /analytics_daily/{dateId} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ── Colección: customers ──────────────────────────────────────────────
+    match /customers/{customerId} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}

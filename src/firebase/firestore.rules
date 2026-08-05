@@ -1,0 +1,98 @@
+rules_version = '2';
+// ══════════════════════════════════════════════════════════════════════════
+// FIRESTORE SECURITY RULES — Donde los Zambrano POS
+// ══════════════════════════════════════════════════════════════════════════
+//
+// ESTADO ACTUAL: Modo TEST (abierto) — válido hasta Firebase lo expira
+// RECOMENDACIÓN: Implementar Firebase Authentication para modo producción.
+//
+// Para aplicar estas reglas:
+//   Firebase Console → Firestore → Reglas → Pegar este contenido → Publicar
+//
+// ══════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────────────────────
+    // FASE 1 (ACTUAL): Modo test permisivo
+    // Válido mientras no haya Firebase Auth implementado.
+    // Permite lectura/escritura desde cualquier origen.
+    // ─────────────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+
+    // ─────────────────────────────────────────────────────────────
+    // FASE 2 (FUTURO — descomenta cuando implementes Firebase Auth):
+    // Reemplaza el bloque de arriba con las reglas de abajo.
+    // ─────────────────────────────────────────────────────────────
+
+    /*
+
+    // ── HELPERS ───────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    function isMesero() {
+      return isAuthenticated() && (getUserRole() == 'mesero' || getUserRole() == 'admin');
+    }
+
+    // ── ORDERS ────────────────────────────────────────────────────
+    // Meseros pueden crear y leer. Solo admin puede eliminar.
+    match /orders/{orderId} {
+      allow read:   if isMesero();
+      allow create: if isMesero()
+                    && request.resource.data.session in ['LUNCH', 'FAST_FOOD']
+                    && request.resource.data.total is number
+                    && request.resource.data.total > 0;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── PRODUCTS ──────────────────────────────────────────────────
+    // Todos los autenticados pueden leer. Solo admin puede escribir.
+    match /products/{productId} {
+      allow read:  if isMesero();
+      allow write: if isAdmin();
+    }
+
+    // ── CUSTOMERS ─────────────────────────────────────────────────
+    // Meseros pueden crear/actualizar. Solo admin puede leer lista.
+    match /customers/{customerId} {
+      allow read:   if isAdmin();
+      allow create: if isMesero();
+      allow update: if isMesero();
+      allow delete: if isAdmin();
+    }
+
+    // ── USERS ─────────────────────────────────────────────────────
+    // Solo admin puede gestionar usuarios.
+    match /users/{userId} {
+      allow read:  if request.auth.uid == userId || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ── ANALYTICS_DAILY ───────────────────────────────────────────
+    // Meseros pueden actualizar (vía increment). Solo admin puede leer historial.
+    match /analytics_daily/{dateId} {
+      allow read:   if isAdmin();
+      allow create: if isMesero();
+      allow update: if isMesero();
+      allow delete: if isAdmin();
+    }
+
+    */
+
+  }
+}
