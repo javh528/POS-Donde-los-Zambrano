@@ -11,11 +11,13 @@ export const OrderConsole = ({ onOpenInvoice }) => {
     activeTableId,
     tables,
     shiftMode,
+    userRole,
     fastFoodMenu,
     lunchMenu,
     addItemToTable,
     updateItemQty,
     markTableServed,
+    markTableBilling,
     setCurrentView,
   } = useApp();
 
@@ -273,13 +275,27 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                 <span>Imprimir Cocina</span>
               </button>
 
-              <button
-                onClick={() => onOpenInvoice(activeTable)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <UtensilsCrossed className="w-3.5 h-3.5" />
-                <span>Facturar / Cobrar</span>
-              </button>
+              {userRole === 'ADMIN' ? (
+                <button
+                  onClick={() => onOpenInvoice(activeTable)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UtensilsCrossed className="w-3.5 h-3.5" />
+                  <span>Facturar / Cobrar</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    markTableServed(activeTable.id);
+                    markTableBilling(activeTable.id);
+                    setCurrentView('TABLES');
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-1.5 px-3 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UtensilsCrossed className="w-3.5 h-3.5" />
+                  <span>Servida / Dejar Pendiente</span>
+                </button>
+              )}
             </>
           )}
         </div>
@@ -860,6 +876,7 @@ export const OrderConsole = ({ onOpenInvoice }) => {
               <button
                 onClick={() => {
                   markTableServed(activeTable.id);
+                  markTableBilling(activeTable.id);
                   setCurrentView('TABLES');
                 }}
                 className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition-all shadow cursor-pointer"
@@ -867,6 +884,16 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                 <Utensils className="w-3.5 h-3.5" />
                 <span>MARCAR SERVIDA</span>
               </button>
+
+              {userRole === 'ADMIN' && (
+                <button
+                  onClick={() => onOpenInvoice(activeTable)}
+                  className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black py-2 px-3 rounded-xl text-xs transition-all shadow-md cursor-pointer"
+                >
+                  <UtensilsCrossed className="w-3.5 h-3.5" />
+                  <span>COBRAR &amp; FACTURAR</span>
+                </button>
+              )}
             </div>
           )}
         </aside>
@@ -914,12 +941,25 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                 <Printer className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={() => onOpenInvoice(activeTable)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow cursor-pointer whitespace-nowrap"
-              >
-                Cobrar
-              </button>
+              {userRole === 'ADMIN' ? (
+                <button
+                  onClick={() => onOpenInvoice(activeTable)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow cursor-pointer whitespace-nowrap"
+                >
+                  Cobrar
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    markTableServed(activeTable.id);
+                    markTableBilling(activeTable.id);
+                    setCurrentView('TABLES');
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-3 py-2 rounded-xl text-xs shadow cursor-pointer whitespace-nowrap"
+                >
+                  Servida / Pendiente
+                </button>
+              )}
             </>
           )}
         </div>
@@ -1021,16 +1061,31 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                   <span>Imprimir Cocina</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setShowMobileOrderDrawer(false);
-                    onOpenInvoice(activeTable);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow"
-                >
-                  <UtensilsCrossed className="w-3.5 h-3.5" />
-                  <span>Cobrar Factura</span>
-                </button>
+                {userRole === 'ADMIN' ? (
+                  <button
+                    onClick={() => {
+                      setShowMobileOrderDrawer(false);
+                      onOpenInvoice(activeTable);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                  >
+                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                    <span>Cobrar Factura</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowMobileOrderDrawer(false);
+                      markTableServed(activeTable.id);
+                      markTableBilling(activeTable.id);
+                      setCurrentView('TABLES');
+                    }}
+                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                  >
+                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                    <span>Servida &amp; Pendiente</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
