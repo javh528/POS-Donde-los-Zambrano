@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Plus, Receipt, Trash2, Printer, UtensilsCrossed, DollarSign, PhoneCall } from 'lucide-react';
+import { Plus, Receipt, Trash2, Printer, UtensilsCrossed, DollarSign, PhoneCall, Moon, Sun, X } from 'lucide-react';
 import { generateKitchenTicket } from '../utils/kitchenTicket';
 
 export const TableGrid = ({ onOpenInvoice }) => {
@@ -9,6 +9,7 @@ export const TableGrid = ({ onOpenInvoice }) => {
     shiftMode,
     userRole,
     openTableOrder,
+    selectShiftMode,
     clearTable,
     markTableServed,
     markTableBilling,
@@ -16,6 +17,9 @@ export const TableGrid = ({ onOpenInvoice }) => {
     acceptQrAlert,
     dismissQrAlert,
   } = useApp();
+
+  // Mini-modal selector de tipo de pedido (solo para ADMIN cuando la mesa está libre)
+  const [orderTypePicker, setOrderTypePicker] = useState(null); // null | tableId
 
   const handlePrintKitchenTicket = (table) => {
     const doc = generateKitchenTicket(table, shiftMode);
@@ -182,7 +186,13 @@ export const TableGrid = ({ onOpenInvoice }) => {
                 {/* LIBRE */}
                 {isAvailable && (
                   <button
-                    onClick={() => openTableOrder(table.id)}
+                    onClick={() => {
+                      if (userRole === 'ADMIN') {
+                        setOrderTypePicker(table.id);
+                      } else {
+                        openTableOrder(table.id);
+                      }
+                    }}
                     className="w-full flex items-center justify-center gap-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold py-1.5 rounded-xl text-[11px] transition-all border border-emerald-500/30"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -280,6 +290,54 @@ export const TableGrid = ({ onOpenInvoice }) => {
           );
         })}
       </div>
+
+      {/* ── MINI MODAL: Tipo de Pedido (solo ADMIN) ── */}
+      {orderTypePicker !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-xs p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-white">¿Qué tipo de comanda?</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Mesa {orderTypePicker}</p>
+              </div>
+              <button
+                onClick={() => setOrderTypePicker(null)}
+                className="p-1 bg-slate-800 text-slate-400 hover:text-white rounded-xl cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Rápidas */}
+              <button
+                onClick={() => {
+                  selectShiftMode('FAST_FOOD');
+                  openTableOrder(orderTypePicker);
+                  setOrderTypePicker(null);
+                }}
+                className="flex flex-col items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600 border border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white rounded-2xl py-4 px-3 transition-all cursor-pointer"
+              >
+                <Moon className="w-6 h-6" />
+                <span className="text-xs font-black">🌙 Rápidas</span>
+              </button>
+
+              {/* Almuerzo */}
+              <button
+                onClick={() => {
+                  selectShiftMode('LUNCH');
+                  openTableOrder(orderTypePicker);
+                  setOrderTypePicker(null);
+                }}
+                className="flex flex-col items-center justify-center gap-2 bg-amber-500/20 hover:bg-amber-500 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-slate-950 rounded-2xl py-4 px-3 transition-all cursor-pointer"
+              >
+                <Sun className="w-6 h-6" />
+                <span className="text-xs font-black">☀️ Almuerzo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

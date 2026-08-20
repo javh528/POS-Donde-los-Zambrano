@@ -16,6 +16,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -28,11 +29,14 @@ import { db } from './firebaseConfig';
 
 // ── Collection references ──────────────────────────────────────────────────
 export const COLLECTIONS = {
-  ORDERS:          'orders',
-  PRODUCTS:        'products',
-  CUSTOMERS:       'customers',
-  USERS:           'users',
-  ANALYTICS_DAILY: 'analytics_daily',
+  ORDERS:                 'orders',
+  PRODUCTS:               'products',
+  CUSTOMERS:              'customers',
+  USERS:                  'users',
+  ANALYTICS_DAILY:        'analytics_daily',
+  COMPANIES:              'companies',
+  CORPORATE_CONSUMPTIONS: 'corporate_consumptions',
+  CORPORATE_INVOICES:     'corporate_invoices',
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -175,14 +179,9 @@ export const getOrders = async ({
 
 export const getProductsFromFirestore = async () => {
   try {
-    const snap = await getDocs(
-      query(
-        collection(db, COLLECTIONS.PRODUCTS),
-        where('active', '==', true),
-        orderBy('sortOrder', 'asc')
-      )
-    );
+    const snap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
     const products = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    products.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     console.log(`[Firestore] Loaded ${products.length} products`);
     return products;
   } catch (err) {
@@ -195,12 +194,45 @@ export const upsertProduct = async (productId, productData) => {
   try {
     await setDoc(
       doc(db, COLLECTIONS.PRODUCTS, productId),
-      { ...productData, updatedAt: serverTimestamp() },
+      {
+        ...productData,
+        active: productData.disponible_hoy ?? productData.active ?? true,
+        disponible_hoy: productData.disponible_hoy ?? productData.active ?? true,
+        updatedAt: serverTimestamp(),
+      },
       { merge: true }
     );
     return true;
   } catch (err) {
     console.error('[Firestore] ❌ upsertProduct error:', err);
+    return false;
+  }
+};
+
+export const toggleProductAvailabilityInFirestore = async (productId, available) => {
+  try {
+    await setDoc(
+      doc(db, COLLECTIONS.PRODUCTS, productId),
+      {
+        active: available,
+        disponible_hoy: available,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (err) {
+    console.error('[Firestore] ❌ toggleProductAvailability error:', err);
+    return false;
+  }
+};
+
+export const deleteProductFromFirestore = async (productId) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.PRODUCTS, productId));
+    return true;
+  } catch (err) {
+    console.error('[Firestore] ❌ deleteProduct error:', err);
     return false;
   }
 };
@@ -589,26 +621,137 @@ export const runConcurrencyTest = async (count = 5, testDate = 'TEST-CONC-01') =
   return { passed, failed, total: count };
 };
 
-/**
- * Prueba directa de escritura en Firestore para diagnóstico en tiempo real.
- */
-export const testFirestoreConnection = async () => {
+// ══════════════════════════════════════════════════════════════════════════
+// 7. CORPORATE ACCOUNTS (EMPRESAS & CUENTAS DE COBRO)
+// ══════════════════════════════════════════════════════════════════════════
+
+export const getCompaniesFromFirestore = async () => {
   try {
-    const testDocRef = doc(db, '_diagnostic_test', 'ping');
-    await setDoc(testDocRef, {
-      status: 'OK',
-      message: 'Conexión y escritura en Cloud Firestore funcionando correctamente',
-      timestamp: serverTimestamp(),
-      clientTime: new Date().toISOString(),
-    });
-    console.log('[Firestore Direct Diagnostic] ✅ ESCRITURA EXITOSA en _diagnostic_test/ping');
-    return { success: true, message: '¡Conexión y escritura a Firestore comprobadas con ÉXITO!' };
+    const snap = await getDocs(collection(db, COLLECTIONS.COMPANIES));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   } catch (err) {
-    console.error('[Firestore Direct Diagnostic] ❌ ERROR:', err);
-    return {
-      success: false,
-      error: err.code || err.message || 'Error desconocido al conectar con Firestore',
+    console.error('[Firestore] ❌ getCompanies error:', err);
+    return [];
+  }
+};
+
+export const upsertCompanyInFirestore = async (companyId, companyData) => {
+  try {
+    const id = companyId || `comp-${Date.now()}`;
+    const payload = {
+      ...companyData,
+      id,
+      updatedAt: serverTimestamp(),
     };
+    await setDoc(doc(db, COLLECTIONS.COMPANIES, id), payload, { merge: true });
+    return payload;
+  } catch (err) {
+    console.error('[Firestore] ❌ upsertCompany error:', err);
+    throw err;
+  }
+};
+
+export const deleteCompanyFromFirestore = async (companyId) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.COMPANIES, companyId));
+    return true;
+  } catch (err) {
+    console.error('[Firestore] ❌ deleteCompany error:', err);
+    return false;
+  }
+};
+
+export const getCorporateConsumptionsFromFirestore = async (companyId = null) => {
+  try {
+    const colRef = collection(db, COLLECTIONS.CORPORATE_CONSUMPTIONS);
+    const snap = companyId
+      ? await getDocs(query(colRef, where('companyId', '==', companyId)))
+      : await getDocs(colRef);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('[Firestore] ❌ getCorporateConsumptions error:', err);
+    return [];
+  }
+};
+
+export const upsertCorporateConsumptionInFirestore = async (consumptionId, data) => {
+  try {
+    const id = consumptionId || `cons-${Date.now()}`;
+    const payload = {
+      ...data,
+      id,
+      updatedAt: serverTimestamp(),
+    };
+    await setDoc(doc(db, COLLECTIONS.CORPORATE_CONSUMPTIONS, id), payload, { merge: true });
+    return payload;
+  } catch (err) {
+    console.error('[Firestore] ❌ upsertCorporateConsumption error:', err);
+    throw err;
+  }
+};
+
+export const deleteCorporateConsumptionFromFirestore = async (consumptionId) => {
+  try {
+    await deleteDoc(doc(db, COLLECTIONS.CORPORATE_CONSUMPTIONS, consumptionId));
+    return true;
+  } catch (err) {
+    console.error('[Firestore] ❌ deleteCorporateConsumption error:', err);
+    return false;
+  }
+};
+
+export const markConsumptionsBilledInFirestore = async (consumptionIds, cuentaCobroId) => {
+  try {
+    await Promise.all(
+      consumptionIds.map((id) =>
+        setDoc(
+          doc(db, COLLECTIONS.CORPORATE_CONSUMPTIONS, id),
+          { status: 'BILLED', cuentaCobroId, billedAt: serverTimestamp() },
+          { merge: true }
+        )
+      )
+    );
+    return true;
+  } catch (err) {
+    console.error('[Firestore] ❌ markConsumptionsBilled error:', err);
+    return false;
+  }
+};
+
+export const saveCorporateInvoiceInFirestore = async (invoiceData) => {
+  try {
+    const id = invoiceData.id || `CC-${Date.now()}`;
+    const payload = {
+      ...invoiceData,
+      id,
+      createdAt: serverTimestamp(),
+    };
+    await setDoc(doc(db, COLLECTIONS.CORPORATE_INVOICES, id), payload);
+    return payload;
+  } catch (err) {
+    console.error('[Firestore] ❌ saveCorporateInvoice error:', err);
+    throw err;
+  }
+};
+
+export const getCorporateInvoicesByCompanyFromFirestore = async (companyId) => {
+  try {
+    const colRef = collection(db, COLLECTIONS.CORPORATE_INVOICES);
+    // Realizamos solo el filtrado por companyId para evitar el error de índice compuesto faltante.
+    // El ordenamiento lo hacemos en memoria.
+    const q = query(colRef, where('companyId', '==', companyId));
+    const snap = await getDocs(q);
+    const results = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    
+    // Ordenar descendente por fecha de creación (createdAt o date)
+    return results.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date || 0).getTime();
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.date || 0).getTime();
+      return timeB - timeA;
+    });
+  } catch (err) {
+    console.error('[Firestore] ❌ getCorporateInvoices error:', err);
+    return [];
   }
 };
 

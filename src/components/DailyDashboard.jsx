@@ -6,7 +6,7 @@ import {
   BarChart3, DollarSign, ShoppingBag, Sun, Moon, Printer,
   TrendingUp, TrendingDown, Award, AlertTriangle, Star,
   Zap, Package, Clock, Filter, ChevronDown, ChevronUp,
-  ArrowUpRight, ArrowDownRight, Minus as MinusIcon, KeyRound, Lock, X, CheckCircle, Loader2, Search
+  ArrowUpRight, ArrowDownRight, Minus as MinusIcon, KeyRound, Lock, X, CheckCircle, Loader2, Search, Utensils, Building2
 } from 'lucide-react';
 
 /* ── WhatsApp Icon ── */
@@ -97,7 +97,7 @@ const SimpleBar = ({ label, value, max, color = 'bg-red-500' }) => {
    MAIN DASHBOARD COMPONENT
 ══════════════════════════════════════════════════════════════ */
 export const DailyDashboard = () => {
-  const { salesHistory } = useApp();
+  const { salesHistory, setCurrentView } = useApp();
   const [filterShift, setFilterShift] = useState('ALL');
   const [showHistory, setShowHistory] = useState(false);
 
@@ -347,20 +347,8 @@ export const DailyDashboard = () => {
           </p>
         </div>
 
-        {/* Global Shift Filter + Admin Settings */}
+        {/* Global Shift Filter */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              setShowPasswordModal(true);
-              setPassError('');
-              setPassSuccess('');
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition-all shadow cursor-pointer"
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Cambiar Clave BD</span>
-          </button>
-
           <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-0.5">
             <button
               onClick={() => setFilterShift('ALL')}

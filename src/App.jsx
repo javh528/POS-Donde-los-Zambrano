@@ -6,6 +6,8 @@ import { PortalIndex } from './components/PortalIndex';
 import { TableGrid } from './components/TableGrid';
 import { OrderConsole } from './components/OrderConsole';
 import { DailyDashboard } from './components/DailyDashboard';
+import { MenuAdmin } from './components/MenuAdmin';
+import { CorporateAccounts } from './components/CorporateAccounts';
 import { InvoiceModal } from './components/InvoiceModal';
 import { Footer } from './components/Footer';
 import './App.css';
@@ -38,6 +40,18 @@ function MainApp() {
           <div className="flex-1 overflow-auto"><TableGrid onOpenInvoice={handleOpenInvoice} /></div>
         ) : currentView === 'ORDER' ? (
           <OrderConsole onOpenInvoice={handleOpenInvoice} />
+        ) : currentView === 'MENU_ADMIN' ? (
+          userRole === 'ADMIN' ? (
+            <div className="flex-1 overflow-auto"><MenuAdmin /></div>
+          ) : (
+            <div className="flex-1 overflow-auto"><TableGrid onOpenInvoice={handleOpenInvoice} /></div>
+          )
+        ) : currentView === 'CORPORATE' ? (
+          userRole === 'ADMIN' ? (
+            <div className="flex-1 overflow-auto"><CorporateAccounts /></div>
+          ) : (
+            <div className="flex-1 overflow-auto"><TableGrid onOpenInvoice={handleOpenInvoice} /></div>
+          )
         ) : currentView === 'DASHBOARD' ? (
           userRole === 'ADMIN' ? (
             <div className="flex-1 overflow-auto"><DailyDashboard /></div>

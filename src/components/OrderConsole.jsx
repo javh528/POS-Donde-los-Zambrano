@@ -61,26 +61,21 @@ export const OrderConsole = ({ onOpenInvoice }) => {
     return matching.reduce((sum, i) => sum + (i.qty || 1), 0);
   };
 
+  // Lunch available items
+  const availableSoups = (lunchMenu.soups || []).filter(
+    (s) => !(lunchMenu.disabledSoups || []).includes(s)
+  );
+  const availableProteins = (lunchMenu.proteins || []).filter(
+    (p) => !(lunchMenu.disabledProteins || []).includes(p)
+  );
+
   // Lunch Combo Configurator State
-  const [lunchSoup, setLunchSoup] = useState(lunchMenu.soups[0]);
-  const [lunchProtein, setLunchProtein] = useState(lunchMenu.proteins[0]);
+  const [lunchSoup, setLunchSoup] = useState(availableSoups[0] || (lunchMenu.soups && lunchMenu.soups[0]) || '');
+  const [lunchProtein, setLunchProtein] = useState(availableProteins[0] || (lunchMenu.proteins && lunchMenu.proteins[0]) || '');
   const [lunchRice, setLunchRice] = useState(lunchMenu.sidesOptions[0].options[0]);
   const [lunchSalad, setLunchSalad] = useState(lunchMenu.sidesOptions[1].options[0]);
   const [lunchSide, setLunchSide] = useState(lunchMenu.sidesOptions[2].options[0]);
-  const [lunchDrink, setLunchDrink] = useState(lunchMenu.drinks[0]);
   const [lunchNoteCustom, setLunchNoteCustom] = useState('');
-  const [selectedLunchExtras, setSelectedLunchExtras] = useState([]);
-
-  const toggleLunchExtra = (extra) => {
-    setSelectedLunchExtras((prev) => {
-      const exists = prev.some((e) => e.id === extra.id);
-      if (exists) {
-        return prev.filter((e) => e.id !== extra.id);
-      } else {
-        return [...prev, extra];
-      }
-    });
-  };
 
   // Fast Food Menu Data mapping
   const salchipapasTradicionales = fastFoodMenu.find((c) => c.category === 'Salchipapas')?.items || [];
@@ -101,28 +96,19 @@ export const OrderConsole = ({ onOpenInvoice }) => {
 
   const handleAddLunchCombo = () => {
     const basePrice = lunchMenu.priceBase || 15000;
-    const extrasTotal = selectedLunchExtras.reduce((acc, curr) => acc + curr.price, 0);
-    const totalPrice = basePrice + extrasTotal;
-
-    const comboDescription = `Sopa: ${lunchSoup} | Seco: ${lunchProtein} (${lunchRice}, ${lunchSalad}, ${lunchSide}) | Bebida: ${lunchDrink}`;
+    const comboDescription = `Sopa: ${lunchSoup} | Seco: ${lunchProtein} (${lunchRice}, ${lunchSalad}, ${lunchSide})`;
 
     let notesText = comboDescription;
-    if (selectedLunchExtras.length > 0) {
-      const extrasList = selectedLunchExtras.map((e) => `${e.name} (+$${e.price.toLocaleString('es-CO')})`).join(', ');
-      notesText += ` | Adicionales: ${extrasList}`;
-    }
     if (lunchNoteCustom.trim()) {
       notesText += ` | Nota Especial: ${lunchNoteCustom.trim()}`;
     }
 
-    const itemName = selectedLunchExtras.length > 0
-      ? `Almuerzo: ${lunchProtein} (+${selectedLunchExtras.length} adic.)`
-      : `Almuerzo: ${lunchProtein}`;
+    const itemName = `Almuerzo: ${lunchProtein}`;
 
     addItemToTable(activeTable.id, {
       id: `almuerzo-${Date.now()}`,
       name: itemName,
-      price: totalPrice,
+      price: basePrice,
       notes: notesText,
       category: 'Almuerzos Caseros',
     });
@@ -132,8 +118,6 @@ export const OrderConsole = ({ onOpenInvoice }) => {
     setLunchRice(lunchMenu.sidesOptions[0].options[0]);
     setLunchSalad(lunchMenu.sidesOptions[1].options[0]);
     setLunchSide(lunchMenu.sidesOptions[2].options[0]);
-    setLunchDrink(lunchMenu.drinks[0]);
-    setSelectedLunchExtras([]);
     setLunchNoteCustom('');
   };
 
@@ -214,11 +198,10 @@ export const OrderConsole = ({ onOpenInvoice }) => {
               <button
                 type="button"
                 onClick={() => handleAddFastFoodItem(item)}
-                className="min-w-[40px] h-8 px-2.5 bg-slate-800 hover:bg-amber-500 text-slate-200 hover:text-slate-950 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-1 border border-slate-700 hover:border-amber-400 shadow-sm cursor-pointer"
+                className="w-8 h-8 bg-slate-800 hover:bg-amber-500 text-slate-200 hover:text-slate-950 font-black rounded-lg text-sm transition-all flex items-center justify-center border border-slate-700 hover:border-amber-400 shadow-sm cursor-pointer shrink-0"
                 title={`Agregar ${item.name}`}
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Agregar</span>
+                <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -331,7 +314,7 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                       <span className="text-base">🥣</span> 1. Sopa del Día
                     </label>
                     <div className="grid grid-cols-1 gap-1.5">
-                      {lunchMenu.soups.map((soup) => (
+                      {availableSoups.map((soup) => (
                         <button
                           key={soup}
                           onClick={() => setLunchSoup(soup)}
@@ -352,7 +335,7 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                       <span className="text-base">🥩</span> 2. Proteína (Seco)
                     </label>
                     <div className="grid grid-cols-1 gap-1.5">
-                      {lunchMenu.proteins.map((prot) => (
+                      {availableProteins.map((prot) => (
                         <button
                           key={prot}
                           onClick={() => setLunchProtein(prot)}
@@ -369,10 +352,10 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                   </div>
                 </div>
 
-                {/* Acompañamientos + Bebida */}
+                {/* Acompañamientos */}
                 <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 space-y-3">
                   <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <span className="text-base">🍚</span> 3. Acompañamientos y Bebida
+                    <span className="text-base">🍚</span> 3. Acompañamientos
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
@@ -412,25 +395,6 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                       </select>
                     </div>
                   </div>
-
-                  <div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase mb-1.5">Bebida Natural</div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {lunchMenu.drinks.map((d) => (
-                        <button
-                          key={d}
-                          onClick={() => setLunchDrink(d)}
-                          className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold border transition-all text-center cursor-pointer ${
-                            lunchDrink === d
-                              ? 'bg-blue-600 text-white border-blue-500 font-bold'
-                              : 'bg-slate-800/50 text-slate-300 border-slate-700/50 hover:bg-slate-800'
-                          }`}
-                        >
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Nota + Botón agregar */}
@@ -452,53 +416,33 @@ export const OrderConsole = ({ onOpenInvoice }) => {
                     <Plus className="w-4 h-4" />
                     <span>
                       + Agregar Almuerzo (
-                      ${((lunchMenu.priceBase || 15000) + selectedLunchExtras.reduce((a, c) => a + c.price, 0)).toLocaleString('es-CO')}
+                      ${(lunchMenu.priceBase || 15000).toLocaleString('es-CO')}
                       )
                     </span>
                   </button>
                 </div>
+              </div>
 
-                {/* Adicionales para ESTE Almuerzo */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <span>➕ Adicionales para este Almuerzo</span>
-                    </h4>
-                    {selectedLunchExtras.length > 0 && (
-                      <span className="text-[10px] font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30 font-mono">
-                        {selectedLunchExtras.length} adición(es) seleccionada(s)
-                      </span>
-                    )}
+              {/* ── CARTA DE BEBIDAS Y GASEOSAS / JUGOS EN ALMUERZO ── */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="px-4 py-3 bg-gradient-to-r from-blue-950/70 via-slate-900 to-slate-900 border-b border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">🥤</span>
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        BEBIDAS (GASEOSAS, JUGOS HIT Y JUGOS NATURALES)
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full font-mono">
+                          {bebidasItems.length} opciones
+                        </span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400">Agrega bebidas por separado a la cuenta de la mesa</p>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {lunchMenu.extras.map((ex) => {
-                      const isSelected = selectedLunchExtras.some((e) => e.id === ex.id);
-                      return (
-                        <button
-                          key={ex.id}
-                          type="button"
-                          onClick={() => toggleLunchExtra(ex)}
-                          className={`p-2.5 rounded-xl text-left transition-all relative border cursor-pointer ${
-                            isSelected
-                              ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md ring-1 ring-amber-500/40 font-bold'
-                              : 'bg-slate-800/40 hover:bg-slate-700/80 border-slate-700/60 text-slate-300 hover:border-amber-500/40'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="text-xs font-bold leading-tight">{ex.name}</div>
-                            {isSelected && (
-                              <span className="text-[10px] bg-amber-500 text-slate-950 font-black w-4 h-4 rounded-full flex items-center justify-center shrink-0">
-                                ✓
-                              </span>
-                            )}
-                          </div>
-                          <div className={`text-[11px] font-mono font-semibold mt-1 ${isSelected ? 'text-amber-300' : 'text-amber-400'}`}>
-                            +${ex.price.toLocaleString('es-CO')}
-                          </div>
-                        </button>
-                      );
-                    })}
+                <div className="p-3.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {bebidasItems.map((item) => renderCompactRow(item, 'hover:border-blue-500/50'))}
                   </div>
                 </div>
               </div>
