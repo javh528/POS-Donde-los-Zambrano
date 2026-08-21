@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { generateInvoicePDF, shareInvoiceViaWhatsApp } from '../utils/pdfGenerator';
-import { changeAdminPassword } from '../services/authService';
 import {
   BarChart3, DollarSign, ShoppingBag, Sun, Moon, Printer,
   TrendingUp, TrendingDown, Award, AlertTriangle, Star,
   Zap, Package, Clock, Filter, ChevronDown, ChevronUp,
-  ArrowUpRight, ArrowDownRight, Minus as MinusIcon, KeyRound, Lock, X, CheckCircle, Loader2, Search, Utensils, Building2
+  ArrowUpRight, ArrowDownRight, Minus as MinusIcon, Search, Utensils, Building2
 } from 'lucide-react';
 
 /* ── WhatsApp Icon ── */
@@ -28,27 +27,92 @@ const KpiCard = ({ icon: Icon, label, value, sub, color = 'amber', trend = null,
   const c = colors[color] || colors.amber;
   return (
     <div className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-4 shadow-lg relative overflow-hidden`}>
-      <div className="flex items-start justify-between mb-2">
-        <p className={`text-[10px] font-black uppercase tracking-widest ${c.icon}`}>{label}</p>
-        <Icon className={`w-4 h-4 ${c.icon} opacity-70`} />
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+        <div className={`p-2 rounded-xl bg-slate-900/80 border border-slate-800 ${c.icon}`}>
+          <Icon className="w-4 h-4" />
+        </div>
       </div>
-      <div className={`text-2xl font-black ${c.val} font-mono leading-tight`}>{value}</div>
-      <div className="flex items-center justify-between mt-1.5">
-        <p className="text-[10px] text-slate-400">{sub}</p>
-        {trend !== null && (
-          <div className={`flex items-center gap-0.5 text-[10px] font-bold ${
-            trend > 0 ? 'text-emerald-400' : trend < 0 ? 'text-red-400' : 'text-slate-400'
-          }`}>
-            {trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : trend < 0 ? <ArrowDownRight className="w-3 h-3" /> : <MinusIcon className="w-3 h-3" />}
-            <span>{trendLabel}</span>
-          </div>
-        )}
+      <div className={`text-2xl font-black font-mono ${c.val} tracking-tight`}>{value}</div>
+      {sub && <div className="text-[11px] text-slate-400 mt-1 font-medium">{sub}</div>}
+      {trend !== null && (
+        <div className={`flex items-center gap-1 text-[11px] font-bold mt-2 ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          {trend > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : trend < 0 ? <ArrowDownRight className="w-3.5 h-3.5" /> : <MinusIcon className="w-3.5 h-3.5" />}
+          <span>{trendLabel}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Bar Meter Component ── */
+const BarMeter = ({ label, value, max, color = 'bg-amber-500', prefix = '' }) => {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs font-bold">
+        <span className="text-slate-300 truncate">{label}</span>
+        <span className="text-slate-400 font-mono">{prefix}{value.toLocaleString('es-CO')}</span>
+      </div>
+      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 flex items-center">
+        <div
+          className={`${color} h-full rounded-full transition-all duration-700`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
 };
 
-/* ── Alert Badge ── */
+/* ── Peak Hours Simple Chart ── */
+const PeakHoursChart = ({ hourlySales }) => {
+  const maxVal = Math.max(...Object.values(hourlySales), 1);
+  const hours = Array.from({ length: 16 }, (_, i) => i + 8); // 8:00 to 23:00
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-end justify-between gap-1 h-32 pt-4 px-2">
+        {hours.map((h) => {
+          const val = hourlySales[h] || 0;
+          const pct = Math.round((val / maxVal) * 100);
+          const isLunch = h >= 11 && h <= 15;
+          return (
+            <div key={h} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
+              {val > 0 && (
+                <div className="absolute -top-6 bg-slate-950 text-amber-300 text-[9px] font-mono px-1 py-0.5 rounded border border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap">
+                  ${val.toLocaleString('es-CO')}
+                </div>
+              )}
+              <div
+                className={`w-full rounded-t transition-all duration-500 ${
+                  val === 0
+                    ? 'bg-slate-800/40 h-1'
+                    : isLunch
+                    ? 'bg-gradient-to-t from-amber-600 to-amber-400 shadow-sm shadow-amber-500/20'
+                    : 'bg-gradient-to-t from-red-600 to-red-400 shadow-sm shadow-red-500/20'
+                }`}
+                style={{ height: `${Math.max(pct, 4)}%` }}
+              />
+              <span className="text-[8px] font-mono text-slate-500 group-hover:text-slate-300">{h}h</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded bg-amber-500 inline-block" />
+          <span>☀️ Almuerzos (11h-15h)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded bg-red-500 inline-block" />
+          <span>🌙 Comidas Rápidas (17h-23h)</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Smart Alert Badge ── */
 const AlertBadge = ({ type, message }) => {
   const styles = {
     warning: 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300',
@@ -63,8 +127,8 @@ const AlertBadge = ({ type, message }) => {
     info: <Zap className="w-3.5 h-3.5 shrink-0" />,
   };
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${styles[type]}`}>
-      {icons[type]}
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${styles[type] || styles.info}`}>
+      {icons[type] || icons.info}
       <span>{message}</span>
     </div>
   );
@@ -97,7 +161,16 @@ const SimpleBar = ({ label, value, max, color = 'bg-red-500' }) => {
    MAIN DASHBOARD COMPONENT
 ══════════════════════════════════════════════════════════════ */
 export const DailyDashboard = () => {
-  const { salesHistory, setCurrentView } = useApp();
+  const {
+    salesHistory,
+    setCurrentView,
+    showPasswordModal,
+    setShowPasswordModal,
+    passError,
+    setPassError,
+    passSuccess,
+    setPassSuccess,
+  } = useApp();
   const [filterShift, setFilterShift] = useState('ALL');
   const [showHistory, setShowHistory] = useState(false);
 
@@ -288,49 +361,6 @@ export const DailyDashboard = () => {
     }
     return list;
   }, [todaySales, revenueTrend, todayRevenue, weekDailyAvg, leastSold, productMetrics, avgTicket, todayAvgTicket]);
-
-  // Change Password Modal State
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [currentPassInput, setCurrentPassInput]   = useState('');
-  const [newPassInput, setNewPassInput]           = useState('');
-  const [passError, setPassError]                 = useState('');
-  const [passSuccess, setPassSuccess]             = useState('');
-  const [isUpdatingPass, setIsUpdatingPass]       = useState(false);
-
-  const handleChangePassSubmit = async (e) => {
-    e.preventDefault();
-    setPassError('');
-    setPassSuccess('');
-
-    if (!currentPassInput.trim()) {
-      setPassError('Ingresa la contraseña actual.');
-      return;
-    }
-    if (!newPassInput.trim() || newPassInput.length < 4) {
-      setPassError('La nueva contraseña debe tener al menos 4 caracteres.');
-      return;
-    }
-
-    setIsUpdatingPass(true);
-    try {
-      const res = await changeAdminPassword(currentPassInput, newPassInput);
-      if (res.success) {
-        setPassSuccess(res.message);
-        setTimeout(() => {
-          setShowPasswordModal(false);
-          setPassSuccess('');
-          setCurrentPassInput('');
-          setNewPassInput('');
-        }, 2000);
-      } else {
-        setPassError(res.error || 'No se pudo actualizar la contraseña.');
-      }
-    } catch (err) {
-      setPassError('Error al actualizar la contraseña en Firestore.');
-    } finally {
-      setIsUpdatingPass(false);
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-5 space-y-5 z-10 relative">
@@ -726,88 +756,6 @@ export const DailyDashboard = () => {
           </div>
         )}
       </div>
-
-      {/* ── CHANGE PASSWORD MODAL ── */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
-            <button
-              onClick={() => setShowPasswordModal(false)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider border-b border-slate-800 pb-3">
-              <KeyRound className="w-4 h-4" />
-              <span>Configuración de Administrador</span>
-            </div>
-
-            <h3 className="text-xl font-black text-white">Cambiar Contraseña en Firestore</h3>
-            <p className="text-xs text-slate-400">
-              Actualiza la contraseña del Administrador (Carlos Zambrano) directamente en la base de datos de la plataforma.
-            </p>
-
-            {passError && (
-              <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-300 text-xs font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                <span>{passError}</span>
-              </div>
-            )}
-
-            {passSuccess && (
-              <div className="p-3 bg-emerald-950/80 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{passSuccess}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleChangePassSubmit} className="space-y-4 pt-1">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Contraseña Actual
-                </label>
-                <input
-                  type="password"
-                  value={currentPassInput}
-                  onChange={(e) => setCurrentPassInput(e.target.value)}
-                  placeholder="Ingresa tu clave actual"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder-slate-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                  Nueva Contraseña
-                </label>
-                <input
-                  type="password"
-                  value={newPassInput}
-                  onChange={(e) => setNewPassInput(e.target.value)}
-                  placeholder="Escribe la nueva clave"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder-slate-600"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isUpdatingPass}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isUpdatingPass ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>GUARDANDO EN FIRESTORE...</span>
-                  </>
-                ) : (
-                  <span>ACTUALIZAR CONTRASEÑA EN BD</span>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

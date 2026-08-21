@@ -227,6 +227,11 @@ export const AppProvider = ({ children }) => {
   // ── QR Alerts (pedidos reales via QR — inicia vacío) ──────────────────────
   const [qrAlerts, setQrAlerts] = useState([]);
 
+  // ── Change Password Modal — estado global para que Navbar y Dashboard lo compartan ──
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passError, setPassError]                 = useState('');
+  const [passSuccess, setPassSuccess]             = useState('');
+
   // ── Persist tables & sales & companies to localStorage ────────────────────
   useEffect(() => {
     localStorage.setItem('zambrano_tables', JSON.stringify(tables));
@@ -786,6 +791,14 @@ export const AppProvider = ({ children }) => {
         markTableBilling,
         acceptQrAlert,
         dismissQrAlert,
+
+        // Change Password Modal (estado global compartido entre Navbar y DailyDashboard)
+        showPasswordModal,
+        setShowPasswordModal,
+        passError,
+        setPassError,
+        passSuccess,
+        setPassSuccess,
 
         // Acciones CRUD & Disponibilidad de Menú para Administrador
         toggleProductAvailability,

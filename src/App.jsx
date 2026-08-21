@@ -9,6 +9,7 @@ import { DailyDashboard } from './components/DailyDashboard';
 import { MenuAdmin } from './components/MenuAdmin';
 import { CorporateAccounts } from './components/CorporateAccounts';
 import { InvoiceModal } from './components/InvoiceModal';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { Footer } from './components/Footer';
 import './App.css';
 
@@ -73,6 +74,9 @@ function MainApp() {
           onClose={handleCloseInvoice}
         />
       )}
+
+      {/* Global Change Password Modal Overlay */}
+      <ChangePasswordModal />
     </div>
   );
 }
