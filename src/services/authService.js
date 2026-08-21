@@ -21,9 +21,11 @@ import {
   updateAdminPasswordInFirestore,
   recoverAdminPasswordInFirestore,
 } from '../firebase/firestoreService';
+import { verifyPassword } from '../utils/cryptoUtils';
 
 /**
- * Autentica al Administrador validando usuario y contraseña contra Firestore.
+ * Autentica al Administrador validando usuario y contraseña contra Firestore con SHA-256.
+ * Sin contraseñas maestras quemadas en código.
  */
 export const authenticateAdmin = async (username, password) => {
   const cleanUsername = (username || '').trim().toLowerCase();
@@ -53,15 +55,10 @@ export const authenticateAdmin = async (username, password) => {
     // Obtener datos del admin desde la base de datos Firestore
     const adminDoc = await getAdminUserDataFromFirestore();
 
-    const storedPassword = adminDoc.password || 'POZ1098765432';
-    const isPozCedulaFormat = /^POZ\d+$/i.test(cleanPassword);
-    const isBackupPassword  = cleanPassword === 'admin123';
+    const storedPassOrHash = adminDoc.passwordHash || adminDoc.password || '';
 
-    // Verificar si la clave ingresada coincide con la BD en Firestore
-    const isPasswordValid =
-      cleanPassword === storedPassword ||
-      isPozCedulaFormat ||
-      isBackupPassword;
+    // Verificar si la clave ingresada coincide criptográficamente con la BD en Firestore
+    const isPasswordValid = await verifyPassword(cleanPassword, storedPassOrHash);
 
     if (!isPasswordValid) {
       return {

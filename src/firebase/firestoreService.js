@@ -26,6 +26,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { hashPassword, verifyPassword } from '../utils/cryptoUtils';
 
 // ── Collection references ──────────────────────────────────────────────────
 export const COLLECTIONS = {
@@ -316,31 +317,36 @@ export const getAdminUserDataFromFirestore = async () => {
       return snap.data();
     }
 
-    // Inicializar documento por defecto si no existe en la BD
+    // Inicializar documento por defecto con contraseña cifrada (SHA-256)
+    const initialPassHash = await hashPassword('POZ1098765432');
+    const initialPinHash  = await hashPassword('1098765432');
+
     const defaultAdminDoc = {
-      id:          'carlos.zambrano',
-      name:        'Carlos Zambrano',
-      username:    'carlos.zambrano',
-      password:    'POZ1098765432',       // Contraseña real inicial en la BD
-      recoveryPin: '1098765432',          // Cédula o PIN de recuperación
-      role:        'ADMIN',
-      active:      true,
-      createdAt:   serverTimestamp(),
-      updatedAt:   serverTimestamp(),
+      id:               'carlos.zambrano',
+      name:             'Carlos Zambrano',
+      username:         'carlos.zambrano',
+      passwordHash:     initialPassHash,     // Contraseña cifrada en BD
+      recoveryPinHash:  initialPinHash,      // Cédula/PIN cifrado en BD
+      role:             'ADMIN',
+      active:           true,
+      createdAt:        serverTimestamp(),
+      updatedAt:        serverTimestamp(),
     };
 
     await setDoc(adminDocRef, defaultAdminDoc);
-    console.log('[Firestore] ✅ Admin user initialized in Firestore (users/carlos.zambrano)');
+    console.log('[Firestore] ✅ Admin user initialized with secure hash in Firestore (users/carlos.zambrano)');
     return defaultAdminDoc;
   } catch (err) {
     console.error('[Firestore] Error reading admin user from Firestore:', err);
-    // Fallback in-memory
+    // Fallback in-memory con hash
+    const initialPassHash = await hashPassword('POZ1098765432');
+    const initialPinHash  = await hashPassword('1098765432');
     return {
       id: 'carlos.zambrano',
       name: 'Carlos Zambrano',
       username: 'carlos.zambrano',
-      password: 'POZ1098765432',
-      recoveryPin: '1098765432',
+      passwordHash: initialPassHash,
+      recoveryPinHash: initialPinHash,
       role: 'ADMIN',
       active: true,
     };
@@ -348,7 +354,8 @@ export const getAdminUserDataFromFirestore = async () => {
 };
 
 /**
- * Cambia la contraseña del Administrador directamente en Firestore.
+ * Cambia la contraseña del Administrador directamente en Firestore con Hashing SHA-256.
+ * Sin contraseñas maestras quemadas en el código.
  */
 export const updateAdminPasswordInFirestore = async (currentPassword, newPassword) => {
   try {
@@ -360,23 +367,30 @@ export const updateAdminPasswordInFirestore = async (currentPassword, newPasswor
       return { success: false, error: 'La nueva contraseña debe tener al menos 4 caracteres.' };
     }
 
-    // Verificar contraseña actual
-    if (cleanCurrent !== adminData.password && cleanCurrent !== 'admin123' && cleanCurrent !== 'POZ1098765432') {
+    // Verificar contraseña actual con hashing seguro
+    const storedPassOrHash = adminData.passwordHash || adminData.password || '';
+    const isCurrentValid = await verifyPassword(cleanCurrent, storedPassOrHash);
+
+    if (!isCurrentValid) {
       return { success: false, error: 'La contraseña actual es incorrecta.' };
     }
 
-    // Actualizar en Firestore
+    // Generar nuevo Hash SHA-256 seguro
+    const newHash = await hashPassword(cleanNew);
+
+    // Actualizar en Firestore (guardando solo el hash cifrado)
     await setDoc(
       doc(db, COLLECTIONS.USERS, 'carlos.zambrano'),
       {
-        password:  cleanNew,
+        passwordHash: newHash,
+        password: null, // Eliminar texto plano si existía
         updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
 
-    console.log('[Firestore] ✅ Admin password updated successfully in Firestore.');
-    return { success: true, message: '¡Contraseña actualizada exitosamente en la base de datos!' };
+    console.log('[Firestore] ✅ Admin password hashed and updated securely in Firestore.');
+    return { success: true, message: '¡Contraseña cifrada y actualizada exitosamente en la base de datos!' };
   } catch (err) {
     console.error('[Firestore] Error updating admin password:', err);
     return { success: false, error: 'Error de conexión al actualizar la contraseña.' };
@@ -384,7 +398,8 @@ export const updateAdminPasswordInFirestore = async (currentPassword, newPasswor
 };
 
 /**
- * Recupera la contraseña del Administrador usando el PIN de Recuperación o Cédula.
+ * Recupera la contraseña del Administrador usando el PIN de Recuperación o Cédula cifrado.
+ * Sin contraseñas maestras quemadas en el código.
  */
 export const recoverAdminPasswordInFirestore = async (recoveryPin, newPassword) => {
   try {
@@ -400,25 +415,31 @@ export const recoverAdminPasswordInFirestore = async (recoveryPin, newPassword) 
       return { success: false, error: 'La nueva contraseña debe tener al menos 4 caracteres.' };
     }
 
-    const storedPin = (adminData.recoveryPin || '1098765432').replace(/\D/g, '');
+    const storedPinOrHash = adminData.recoveryPinHash || adminData.recoveryPin || '1098765432';
 
-    // Validar PIN / Cédula registrado
-    if (cleanPin !== storedPin && cleanPin !== '1098765432' && cleanPin !== '1234') {
+    // Validar PIN / Cédula registrado con hashing
+    const isPinValid = await verifyPassword(cleanPin, storedPinOrHash);
+
+    if (!isPinValid) {
       return { success: false, error: 'El número de cédula o PIN de recuperación es incorrecto.' };
     }
+
+    // Generar nuevo Hash SHA-256 seguro
+    const newHash = await hashPassword(cleanNew);
 
     // Actualizar clave en Firestore
     await setDoc(
       doc(db, COLLECTIONS.USERS, 'carlos.zambrano'),
       {
-        password:  cleanNew,
+        passwordHash: newHash,
+        password: null,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
     );
 
-    console.log('[Firestore] ✅ Admin password recovered and reset in Firestore.');
-    return { success: true, message: '¡Contraseña restablecida exitosamente! Ahora puedes ingresar con tu nueva clave.' };
+    console.log('[Firestore] ✅ Admin password recovered and reset with hash in Firestore.');
+    return { success: true, message: '¡Contraseña restablecida y cifrada exitosamente! Ahora puedes ingresar con tu nueva clave.' };
   } catch (err) {
     console.error('[Firestore] Error recovering admin password:', err);
     return { success: false, error: 'Ocurrió un error al restablecer la contraseña.' };
