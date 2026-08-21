@@ -318,8 +318,8 @@ export const getAdminUserDataFromFirestore = async () => {
     }
 
     // Inicializar documento por defecto con contraseña cifrada (SHA-256)
-    const initialPassHash = await hashPassword('POZ1098765432');
-    const initialPinHash  = await hashPassword('1098765432');
+    const initialPassHash = await hashPassword('POZ76320887');
+    const initialPinHash  = await hashPassword('76320887');
 
     const defaultAdminDoc = {
       id:               'carlos.zambrano',
@@ -339,8 +339,8 @@ export const getAdminUserDataFromFirestore = async () => {
   } catch (err) {
     console.error('[Firestore] Error reading admin user from Firestore:', err);
     // Fallback in-memory con hash
-    const initialPassHash = await hashPassword('POZ1098765432');
-    const initialPinHash  = await hashPassword('1098765432');
+    const initialPassHash = await hashPassword('POZ76320887');
+    const initialPinHash  = await hashPassword('76320887');
     return {
       id: 'carlos.zambrano',
       name: 'Carlos Zambrano',
@@ -415,7 +415,7 @@ export const recoverAdminPasswordInFirestore = async (recoveryPin, newPassword) 
       return { success: false, error: 'La nueva contraseña debe tener al menos 4 caracteres.' };
     }
 
-    const storedPinOrHash = adminData.recoveryPinHash || adminData.recoveryPin || '1098765432';
+    const storedPinOrHash = adminData.recoveryPinHash || adminData.recoveryPin || '76320887';
 
     // Validar PIN / Cédula registrado con hashing
     const isPinValid = await verifyPassword(cleanPin, storedPinOrHash);

@@ -379,7 +379,7 @@ export const LoginScreen = ({ selectedRole, onBack, onLoginSuccess }) => {
                   type="text"
                   value={recoveryPin}
                   onChange={(e) => setRecoveryPin(e.target.value)}
-                  placeholder="Ej. 1098765432"
+                  placeholder="Ej. 76320887"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder-slate-600"
                 />
               </div>
